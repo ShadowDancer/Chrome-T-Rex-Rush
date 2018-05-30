@@ -116,21 +116,28 @@ class Dino():
     def __init__(self,sizex=-1,sizey=-1):
         self.images,self.rect = load_sprite_sheet('dino.png',5,1,sizex,sizey,-1)
         self.images1,self.rect1 = load_sprite_sheet('dino_ducking.png',2,1,59,sizey,-1)
-        self.rect.bottom = int(0.98*height)
-        self.rect.left = width/15
-        self.image = self.images[0]
-        self.index = 0
-        self.counter = 0
-        self.score = 0
-        self.isJumping = False
-        self.isDead = False
-        self.isDucking = False
-        self.isBlinking = False
-        self.movement = [0,0]
-        self.jumpSpeed = 11.5
 
+
+        self.jumpSpeed = 11.5
         self.stand_pos_width = self.rect.width
         self.duck_pos_width = self.rect1.width
+        self.reset();
+
+    def reset(self):
+        """Restarts state of dino if player dies"""
+        self.index = 0 # frame index
+        self.counter = 0 # frmae counter
+        self.score = 0
+        self.isJumping = False # airbone
+        self.isDead = False # collision with petra or cactus
+        self.isDucking = False # leans down to avoid petra
+        self.isBlinking = False
+        self.image = self.images[0]
+
+        # reset dino position
+        self.rect.bottom = int(0.98*height)
+        self.rect.left = width/15
+        self.movement = [0,0] # reset dino
 
     def draw(self):
         screen.blit(self.image,self.rect)
@@ -317,7 +324,7 @@ def introscreen():
                 if event.type == pygame.QUIT:
                     return True
                 if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_SPACE or event.key == pygame.K_UP:
+                    if event.key == pygame.K_SPACE or event.key == pygame.K_UP and temp_dino.isJumping == False:
                         temp_dino.isJumping = True
                         temp_dino.isBlinking = False
                         temp_dino.movement[1] = -1*temp_dino.jumpSpeed
@@ -352,27 +359,36 @@ HI_rect.top = height*0.1
 HI_rect.left = width*0.73
 
 class game:
-    global high_score
-    gamespeed = 4
-    is_start_menu = False
-    is_game_over = False
-    is_game_quit = False
-    player_dino = Dino(44,47)
-    new_ground = None
-    scb = Scoreboard()
-    highsc = Scoreboard(width*0.78)
-    speedup_counter = 0
-
-    cactus_group = pygame.sprite.Group()
-    pteras_group = pygame.sprite.Group()
-    clouds_group = pygame.sprite.Group()
-    last_obstacle = pygame.sprite.Group()
-
     def __init__(self):
+        self.cactus_group = pygame.sprite.Group()
         Cactus.containers = self.cactus_group
+        self.pteras_group = pygame.sprite.Group()
         Ptera.containers = self.pteras_group
+        self.clouds_group = pygame.sprite.Group()
         Cloud.containers = self.clouds_group
-        self.new_ground = Ground(-1*self.gamespeed)
+        self.last_obstacle = pygame.sprite.Group()
+        #player unit
+        self.player_dino = Dino(44,47)
+
+        # scoreborads
+        self.scb = Scoreboard()
+        self.highsc = Scoreboard(width*0.78)
+        self.ground = Ground()
+        self.reset()
+
+    def reset(self):
+        """Resets game to initial state ie player died and we need to start over"""
+        self.gamespeed = 4
+        self.ground.speed = -1*self.gamespeed
+        self.is_game_over = False
+        self.is_game_quit = False
+        self.speedup_counter = 0
+
+        self.cactus_group.empty()
+        self.clouds_group.empty()
+        self.pteras_group.empty()
+        self.last_obstacle.empty()
+        self.player_dino.reset()
 
     def handle_events(self):
         for event in pygame.event.get():
@@ -396,19 +412,28 @@ class game:
                 if event.key == pygame.K_DOWN:
                     self.player_dino.isDucking = False
 
+    def kill_player(self):
+        global high_score
+        """Routine that marks players as dead, computes score, plays sounds tec."""
+        if self.is_game_over:
+            return
+        self.player_dino.isDead = True
+        self.player_dino.isDucking = False
+        self.is_game_over = True
+        if self.player_dino.score > high_score:
+            high_score = self.player_dino.score
+        if pygame.mixer.get_init() != None:
+            die_sound.play()
+
     def check_collisions(self):
         for c in self.cactus_group:
             c.movement[0] = -1*self.gamespeed
             if pygame.sprite.collide_mask(self.player_dino,c):
-                self.player_dino.isDead = True
-                if pygame.mixer.get_init() != None:
-                    die_sound.play()
+               self.kill_player()
         for p in self.pteras_group:
             p.movement[0] = -1*self.gamespeed
             if pygame.sprite.collide_mask(self.player_dino,p):
-                self.player_dino.isDead = True
-                if pygame.mixer.get_init() != None:
-                    die_sound.play()
+                self.kill_player()
         if len(self.cactus_group) < 2:
             if len(self.cactus_group) == 0:
                 self.last_obstacle.empty()
@@ -433,14 +458,19 @@ class game:
         self.cactus_group.update()
         self.pteras_group.update()
         self.clouds_group.update()
-        self.new_ground.update()
+        self.ground.update()
         self.scb.update(self.player_dino.score)
         self.highsc.update(high_score)
+
+        if self.speedup_counter%700 == 699:
+            self.ground.speed -= 1
+            self.gamespeed += 1
+        self.speedup_counter = (self.speedup_counter + 1)
 
     def draw(self):
         if pygame.display.get_surface() != None:
             screen.fill(background_col)
-            self.new_ground.draw()
+            self.ground.draw()
             self.clouds_group.draw(screen)
             self.scb.draw()
             if high_score != 0:
@@ -468,8 +498,7 @@ class game:
                         self.is_game_over = False
                     if event.key == pygame.K_RETURN or event.key == pygame.K_SPACE:
                         self.is_game_over = False
-                        #self.run()
-                        raise 'game reset not implemented!'
+                        self.reset();
         self.highsc.update(high_score)
         if pygame.display.get_surface() != None:
             disp_gameOver_msg(retbutton_image,gameover_image)
@@ -477,14 +506,15 @@ class game:
                 self.highsc.draw()
                 screen.blit(HI_image,HI_rect)
             pygame.display.update()
-        clock.tick(FPS)
 
     def run(self):
         global high_score
         while not self.is_game_quit:
-            while self.is_start_menu:
-                pass
-            while not self.is_game_over:
+            clock.tick(FPS)
+            if self.is_game_over:
+                self.display_game_over()
+
+            else:
                 if pygame.display.get_surface() == None:
                     print("Couldn't load display surface")
                     self.is_game_quit = True
@@ -494,24 +524,7 @@ class game:
                 self.check_collisions()
                 self.update()
                 self.draw()
-                clock.tick(FPS)
-
-                if self.player_dino.isDead:
-                    self.is_game_over = True
-                    if self.player_dino.score > high_score:
-                        high_score = self.player_dino.score
-
-                if self.speedup_counter%700 == 699:
-                    self.new_ground.speed -= 1
-                    self.gamespeed += 1
-
-                self.speedup_counter = (self.speedup_counter + 1)
-
-            if self.is_game_quit:
-                break
-
-            while self.is_game_over:
-                self.display_game_over()
+             
         pygame.quit()
         quit()
 
