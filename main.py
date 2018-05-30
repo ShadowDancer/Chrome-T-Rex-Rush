@@ -1,37 +1,34 @@
-__author__ = "Shivam Shekhar"
+"""Dino game from chrome"""
+__author__ = "Shivam Shekhar,ShadowDancer"
+
 
 import os
-import sys
-import pygame
 import random
-from pygame import *
+import pygame
+from pygame import RLEACCEL
+
 
 pygame.init()
 
-scr_size = (width,height) = (600,150)
+SCR_SIZE = (WIDTH, HEIGHT) = (600, 150)
 FPS = 60
-gravity = 0.6
+GRAVITY = 0.6
 
-black = (0,0,0)
-white = (255,255,255)
-background_col = (235,235,235)
+BACKGROUND_COLOR = (235, 235, 235)
 
-high_score = 0
+HIGH_SCORE = 0
 
-screen = pygame.display.set_mode(scr_size)
-clock = pygame.time.Clock()
+SCREEN = pygame.display.set_mode(SCR_SIZE)
+CLOCK = pygame.time.Clock()
 pygame.display.set_caption("T-Rex Rush")
 
-jump_sound = pygame.mixer.Sound('sprites/jump.wav')
-die_sound = pygame.mixer.Sound('sprites/die.wav')
-checkPoint_sound = pygame.mixer.Sound('sprites/checkPoint.wav')
-
 def load_image(
-    name,
-    sizex=-1,
-    sizey=-1,
-    colorkey=None,
+        name,
+        sizex=-1,
+        sizey=-1,
+        colorkey=None,
     ):
+    """Loads image from file"""
 
     fullname = os.path.join('sprites', name)
     image = pygame.image.load(fullname)
@@ -46,114 +43,111 @@ def load_image(
 
     return (image, image.get_rect())
 
-def load_sprite_sheet(
-        sheetname,
-        nx,
-        ny,
-        scalex = -1,
-        scaley = -1,
-        colorkey = None,
-        ):
-    fullname = os.path.join('sprites',sheetname)
+class SpriteSheet():
+    """Batch of images that can be animatied"""
+    def __init__(self, sprites):
+        self.sprites = sprites
+        self.rect = sprites[0].get_rect()
+
+    def resize(self, size_x=-1, size_y=-1):
+        """Returns new spritesheet with scaled images"""
+        if size_x == 1 and size_y == 1:
+            return self
+
+        new_sprites = []
+        for sprite in self.sprites:
+            new_sprite = pygame.transform.scale(sprite, (size_x, size_y))
+            new_sprites.append(new_sprite)
+        return SpriteSheet(new_sprites)
+
+def load_sprite_sheet(filename, frames_x, frames_y=1, colorkey=None):
+    """Loads SpriteSheet from file"""
+    fullname = os.path.join('sprites', filename)
     sheet = pygame.image.load(fullname)
     sheet = sheet.convert()
-
     sheet_rect = sheet.get_rect()
-
     sprites = []
 
-    sizex = sheet_rect.width/nx
-    sizey = sheet_rect.height/ny
-
-    for i in range(0,ny):
-        for j in range(0,nx):
-            rect = pygame.Rect((j*sizex,i*sizey,sizex,sizey))
+    sizex = sheet_rect.width/frames_x
+    sizey = sheet_rect.height/frames_y
+    for i in range(0, frames_y):
+        for j in range(0, frames_x):
+            rect = pygame.Rect((j*sizex, i*sizey, sizex, sizey))
             image = pygame.Surface(rect.size)
             image = image.convert()
-            image.blit(sheet,(0,0),rect)
+            image.blit(sheet, (0, 0), rect)
 
             if colorkey is not None:
                 if colorkey is -1:
-                    colorkey = image.get_at((0,0))
-                image.set_colorkey(colorkey,RLEACCEL)
-
-            if scalex != -1 or scaley != -1:
-                image = pygame.transform.scale(image,(scalex,scaley))
+                    colorkey = image.get_at((0, 0))
+                image.set_colorkey(colorkey, RLEACCEL)
 
             sprites.append(image)
+    return SpriteSheet(sprites)
 
-    sprite_rect = sprites[0].get_rect()
+DINO_RUN_SHEET = load_sprite_sheet('dino.png', 5, colorkey=-1)
+DINO_DUCK_SHEET = load_sprite_sheet('dino_ducking.png', 2, colorkey=-1)
+CACTUS_SHEET = load_sprite_sheet('cacti-small.png', 3, colorkey=-1)
+PTERA_SHEET = load_sprite_sheet('ptera.png', 2, colorkey=-1)
+NUMBER_HEIGHT = int(11*6/5)
+NUMBERS_SHEET = load_sprite_sheet('numbers.png', 12, colorkey=-1).resize(11, NUMBER_HEIGHT)
 
-    return sprites,sprite_rect
-
-def disp_gameOver_msg(retbutton_image,gameover_image):
-    retbutton_rect = retbutton_image.get_rect()
-    retbutton_rect.centerx = width / 2
-    retbutton_rect.top = height*0.52
-
-    gameover_rect = gameover_image.get_rect()
-    gameover_rect.centerx = width / 2
-    gameover_rect.centery = height*0.35
-
-    screen.blit(retbutton_image, retbutton_rect)
-    screen.blit(gameover_image, gameover_rect)
-
-def extractDigits(number):
-    if number > -1:
-        digits = []
-        i = 0
-        while(number/10 != 0):
-            digits.append(number%10)
-            number = int(number/10)
-
-        digits.append(number%10)
-        for i in range(len(digits),5):
-            digits.append(0)
-        digits.reverse()
-        return digits
+JUMP_SOUND = pygame.mixer.Sound('sprites/jump.wav')
+DIE_SOUND = pygame.mixer.Sound('sprites/die.wav')
+CHECKPOINT_SOUND = pygame.mixer.Sound('sprites/checkPoint.wav')
 
 class Dino():
-    def __init__(self,sizex=-1,sizey=-1):
-        self.images,self.rect = load_sprite_sheet('dino.png',5,1,sizex,sizey,-1)
-        self.images1,self.rect1 = load_sprite_sheet('dino_ducking.png',2,1,59,sizey,-1)
-
-
-        self.jumpSpeed = 11.5
-        self.stand_pos_width = self.rect.width
-        self.duck_pos_width = self.rect1.width
-        self.reset();
+    """Defines dino and its behiavior"""
+    def __init__(self, size_x=-1, size_y=-1):
+        self.dino_run = DINO_RUN_SHEET.resize(size_x, size_y)
+        self.dino_duck = DINO_DUCK_SHEET.resize(59, size_y)
+        self.rect = self.dino_run.rect.copy()
+        self.counter = 0 # frame counter
+        self.image = None # current frame
+        self.index = 0 # frame index
+        self.is_jumping = False # airbone
+        self.is_dead = False # collision with petra or cactus
+        self.is_ducking = False # leans down to avoid petra
+        self.is_blinking = False
+        self.jump_speed = 11.5
+        self.stand_pos_width = self.dino_run.rect.width
+        self.duck_pos_width = self.dino_duck.rect.width
+        self.reset()
 
     def reset(self):
         """Restarts state of dino if player dies"""
-        self.index = 0 # frame index
-        self.counter = 0 # frmae counter
+        self.index = 0
+        self.counter = 0
         self.score = 0
-        self.isJumping = False # airbone
-        self.isDead = False # collision with petra or cactus
-        self.isDucking = False # leans down to avoid petra
-        self.isBlinking = False
-        self.image = self.images[0]
+        self.is_jumping = False
+        self.is_dead = False
+        self.is_ducking = False
+        self.is_blinking = False
+        self.image = self.dino_run.sprites[0]
 
         # reset dino position
-        self.rect.bottom = int(0.98*height)
-        self.rect.left = width/15
-        self.movement = [0,0] # reset dino
+        self.rect.bottom = int(0.98*HEIGHT)
+        self.rect.left = WIDTH/15
+        self.movement = [0, 0] # reset dino
 
     def draw(self):
-        screen.blit(self.image,self.rect)
+        """Draw itself"""
+        SCREEN.blit(self.image, self.rect)
 
     def checkbounds(self):
-        if self.rect.bottom > int(0.98*height):
-            self.rect.bottom = int(0.98*height)
-            self.isJumping = False
+        """Check collision with ground"""
+        if self.rect.bottom > int(0.98*HEIGHT):
+            self.rect.bottom = int(0.98*HEIGHT)
+            self.is_jumping = False
 
     def update(self):
-        if self.isJumping:
-            self.movement[1] = self.movement[1] + gravity
+        """Update dino controls"""
+        if self.is_jumping:
+            self.movement[1] = self.movement[1] + GRAVITY
 
-        if self.isJumping:
+        if self.is_jumping:
             self.index = 0
-        elif self.isBlinking:
+        elif self.is_blinking:
             if self.index == 0:
                 if self.counter % 400 == 399:
                     self.index = (self.index + 1)%2
@@ -161,71 +155,79 @@ class Dino():
                 if self.counter % 20 == 19:
                     self.index = (self.index + 1)%2
 
-        elif self.isDucking:
+        elif self.is_ducking:
             if self.counter % 5 == 0:
                 self.index = (self.index + 1)%2
         else:
             if self.counter % 5 == 0:
                 self.index = (self.index + 1)%2 + 2
 
-        if self.isDead:
-           self.index = 4
+        if self.is_dead:
+            self.index = 4
 
-        if not self.isDucking:
-            self.image = self.images[self.index]
+        if not self.is_ducking:
+            self.image = self.dino_run.sprites[self.index]
             self.rect.width = self.stand_pos_width
         else:
-            self.image = self.images1[(self.index)%2]
+            self.image = self.dino_duck.sprites[(self.index)%2]
             self.rect.width = self.duck_pos_width
 
         self.rect = self.rect.move(self.movement)
         self.checkbounds()
 
-        if not self.isDead and self.counter % 7 == 6 and self.isBlinking == False:
+        if not self.is_dead and self.counter % 7 == 6 and not self.is_blinking:
             self.score += 1
             if self.score % 100 == 0 and self.score != 0:
                 if pygame.mixer.get_init() != None:
-                    checkPoint_sound.play()
+                    CHECKPOINT_SOUND.play()
 
         self.counter = (self.counter + 1)
 
 class Cactus(pygame.sprite.Sprite):
-    def __init__(self,speed=5,sizex=-1,sizey=-1):
-        pygame.sprite.Sprite.__init__(self,self.containers)
-        self.images,self.rect = load_sprite_sheet('cacti-small.png',3,1,sizex,sizey,-1)
-        self.rect.bottom = int(0.98*height)
-        self.rect.left = width + self.rect.width
-        self.image = self.images[random.randrange(0,3)]
-        self.movement = [-1*speed,0]
+    """Deadly cactus"""
+    def __init__(self, speed=5, size_x=-1, size_y=-1):
+        pygame.sprite.Sprite.__init__(self, self.containers)
+        self.cactus_sheet = CACTUS_SHEET.resize(size_x, size_y)
+        self.rect = self.cactus_sheet.rect
+        self.rect.bottom = int(0.98*HEIGHT)
+        self.rect.left = WIDTH + self.rect.width
+        self.image = self.cactus_sheet.sprites[random.randrange(0, 3)]
+        self.movement = [-1*speed, 0]
 
     def draw(self):
-        screen.blit(self.image,self.rect)
+        """Draw"""
+        SCREEN.blit(self.image, self.rect)
 
     def update(self):
+        """Update"""
         self.rect = self.rect.move(self.movement)
 
         if self.rect.right < 0:
             self.kill()
 
 class Ptera(pygame.sprite.Sprite):
-    def __init__(self,speed=5,sizex=-1,sizey=-1):
-        pygame.sprite.Sprite.__init__(self,self.containers)
-        self.images,self.rect = load_sprite_sheet('ptera.png',2,1,sizex,sizey,-1)
-        self.ptera_height = [height*0.82,height*0.75,height*0.60]
-        self.rect.centery = self.ptera_height[random.randrange(0,3)]
-        self.rect.left = width + self.rect.width
-        self.image = self.images[0]
-        self.movement = [-1*speed,0]
+    """Deadly Pterodactylus"""
+    def __init__(self, speed=5, size_x=-1, size_y=-1):
+        pygame.sprite.Sprite.__init__(self, self.containers)
+        self.ptera_sheet = PTERA_SHEET.resize(size_x, size_y)
+        self.rect = self.ptera_sheet.rect.copy()
+        self.ptera_height = [HEIGHT*0.82, HEIGHT*0.75, HEIGHT*0.60]
+        self.rect.centery = self.ptera_height[random.randrange(0, 3)]
+        self.rect.left = WIDTH + self.rect.width
+        self.image = self.ptera_sheet.sprites[0]
+        self.movement = [-1*speed, 0]
         self.index = 0
         self.counter = 0
 
     def draw(self):
-        screen.blit(self.image,self.rect)
+        """Draw"""
+        SCREEN.blit(self.image, self.rect)
 
     def update(self):
+        """Update"""
         if self.counter % 10 == 0:
             self.index = (self.index+1)%2
-        self.image = self.images[self.index]
+        self.image = self.ptera_sheet.sprites[self.index]
         self.rect = self.rect.move(self.movement)
         self.counter = (self.counter + 1)
         if self.rect.right < 0:
@@ -233,19 +235,22 @@ class Ptera(pygame.sprite.Sprite):
 
 
 class Ground():
-    def __init__(self,speed=-5):
-        self.image,self.rect = load_image('ground.png',-1,-1,-1)
-        self.image1,self.rect1 = load_image('ground.png',-1,-1,-1)
-        self.rect.bottom = height
-        self.rect1.bottom = height
+    """Ground stomped by dino"""
+    def __init__(self, speed=-5):
+        self.image, self.rect = load_image('ground.png', -1, -1, -1)
+        self.image1, self.rect1 = load_image('ground.png', -1, -1, -1)
+        self.rect.bottom = HEIGHT
+        self.rect1.bottom = HEIGHT
         self.rect1.left = self.rect.right
         self.speed = speed
 
     def draw(self):
-        screen.blit(self.image,self.rect)
-        screen.blit(self.image1,self.rect1)
+        """Draw"""
+        SCREEN.blit(self.image, self.rect)
+        SCREEN.blit(self.image1, self.rect1)
 
     def update(self):
+        """Update"""
         self.rect.left += self.speed
         self.rect1.left += self.speed
 
@@ -256,123 +261,170 @@ class Ground():
             self.rect1.left = self.rect.right
 
 class Cloud(pygame.sprite.Sprite):
-    def __init__(self,x,y):
-        pygame.sprite.Sprite.__init__(self,self.containers)
-        self.image,self.rect = load_image('cloud.png',int(90*30/42),30,-1)
+    """Harmless cloud"""
+    def __init__(self, pos_x, pos_y):
+        pygame.sprite.Sprite.__init__(self, self.containers)
+        self.image, self.rect = load_image('cloud.png', int(90*30/42), 30, -1)
         self.speed = 1
-        self.rect.left = x
-        self.rect.top = y
-        self.movement = [-1*self.speed,0]
+        self.rect.left = pos_x
+        self.rect.top = pos_y
+        self.movement = [-1*self.speed, 0]
 
     def draw(self):
-        screen.blit(self.image,self.rect)
+        """Draw"""
+        SCREEN.blit(self.image, self.rect)
 
     def update(self):
+        """Update"""
         self.rect = self.rect.move(self.movement)
         if self.rect.right < 0:
             self.kill()
 
 class Scoreboard():
-    def __init__(self,x=-1,y=-1):
+    """Scoreboard displaying player score"""
+    def __init__(self, x=-1, y=-1):
         self.score = 0
-        self.tempimages,self.temprect = load_sprite_sheet('numbers.png',12,1,11,int(11*6/5),-1)
-        self.image = pygame.Surface((55,int(11*6/5)))
+        self.numbers_sheet = NUMBERS_SHEET
+        self.image = pygame.Surface((55, NUMBER_HEIGHT))
         self.rect = self.image.get_rect()
         if x == -1:
-            self.rect.left = width*0.89
+            self.rect.left = WIDTH*0.89
         else:
             self.rect.left = x
         if y == -1:
-            self.rect.top = height*0.1
+            self.rect.top = HEIGHT*0.1
         else:
             self.rect.top = y
 
-    def draw(self):
-        screen.blit(self.image,self.rect)
+    def extract_digits(self, number):
+        """Int to array of ints representing that number"""
+        if number > -1:
+            digits = []
+            while number/10 != 0:
+                digits.append(number%10)
+                number = int(number/10)
 
-    def update(self,score):
-        score_digits = extractDigits(score)
-        self.image.fill(background_col)
-        for s in score_digits:
-            self.image.blit(self.tempimages[s],self.temprect)
-            self.temprect.left += self.temprect.width
-        self.temprect.left = 0
+            digits.append(number%10)
+            for _ in range(len(digits), 5):
+                digits.append(0)
+            digits.reverse()
+            return digits
+        return []
+
+    def draw(self):
+        """Draw"""
+        SCREEN.blit(self.image, self.rect)
+
+    def update(self, score):
+        """Update"""
+        score_digits = self.extract_digits(score)
+        self.image.fill(BACKGROUND_COLOR)
+        for digit in score_digits:
+            self.image.blit(self.numbers_sheet.sprites[digit], self.numbers_sheet.rect)
+            self.numbers_sheet.rect.left += self.numbers_sheet.rect.width
+        self.numbers_sheet.rect.left = 0
 
 
 def introscreen():
-    temp_dino = Dino(44,47)
-    temp_dino.isBlinking = True
-    gameStart = False
+    """Display introscreen and allow player to jump before starting"""
+    temp_dino = Dino(44, 47)
+    temp_dino.is_blinking = True
+    game_start = False
 
-    callout,callout_rect = load_image('call_out.png',196,45,-1)
-    callout_rect.left = width*0.05
-    callout_rect.top = height*0.4
+    callout, callout_rect = load_image('call_out.png', 196, 45, -1)
+    callout_rect.left = WIDTH*0.05
+    callout_rect.top = HEIGHT*0.4
 
-    temp_ground,temp_ground_rect = load_sprite_sheet('ground.png',15,1,-1,-1,-1)
-    temp_ground_rect.left = width/20
-    temp_ground_rect.bottom = height
+    ground_sheet = load_sprite_sheet('ground.png', 15, colorkey=-1)
+    ground_sheet.rect.left = WIDTH/20
+    ground_sheet.rect.bottom = HEIGHT
 
-    logo,logo_rect = load_image('logo.png',240,40,-1)
-    logo_rect.centerx = width*0.6
-    logo_rect.centery = height*0.6
-    while not gameStart:
-        if pygame.display.get_surface() == None:
+    logo, logo_rect = load_image('logo.png', 240, 40, -1)
+    logo_rect.centerx = WIDTH*0.6
+    logo_rect.centery = HEIGHT*0.6
+    while not game_start:
+        if pygame.display.get_surface() is None:
             print("Couldn't load display surface")
-            return True
+            return
         else:
             for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    return True
                 if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_SPACE or event.key == pygame.K_UP and temp_dino.isJumping == False:
-                        temp_dino.isJumping = True
-                        temp_dino.isBlinking = False
-                        temp_dino.movement[1] = -1*temp_dino.jumpSpeed
+                    if event.key == pygame.K_SPACE or event.key == pygame.K_UP\
+                        and not temp_dino.is_jumping:
+                        temp_dino.is_jumping = True
+                        temp_dino.is_blinking = False
+                        temp_dino.movement[1] = -1*temp_dino.jump_speed
 
         temp_dino.update()
 
         if pygame.display.get_surface() != None:
-            screen.fill(background_col)
-            screen.blit(temp_ground[0],temp_ground_rect)
-            if temp_dino.isBlinking:
-                screen.blit(logo,logo_rect)
-                screen.blit(callout,callout_rect)
+            SCREEN.fill(BACKGROUND_COLOR)
+            SCREEN.blit(ground_sheet.sprites[0], ground_sheet.rect)
+            if temp_dino.is_blinking:
+                SCREEN.blit(logo, logo_rect)
+                SCREEN.blit(callout, callout_rect)
             temp_dino.draw()
 
             pygame.display.update()
 
-        clock.tick(FPS)
-        if temp_dino.isJumping == False and temp_dino.isBlinking == False:
-            gameStart = True
+        CLOCK.tick(FPS)
+        if not temp_dino.is_jumping and not temp_dino.is_blinking:
+            game_start = True
 
-#load textures
-retbutton_image, retbutton_rect = load_image('replay_button.png',35,31,-1)
-gameover_image, gameover_rect = load_image('game_over.png',190,11,-1)
-temp_images,temp_rect = load_sprite_sheet('numbers.png',12,1,11,int(11*6/5),-1)
-HI_image = pygame.Surface((22,int(11*6/5)))
-HI_rect = HI_image.get_rect()
-HI_image.fill(background_col)
-HI_image.blit(temp_images[10],temp_rect)
-temp_rect.left += temp_rect.width
-HI_image.blit(temp_images[11],temp_rect)
-HI_rect.top = height*0.1
-HI_rect.left = width*0.73
+#game over message
+RETBUTTON_IMAGE, RETBUTTON_RECT = load_image('replay_button.png', 35, 31, -1)
+GAMEOVER_IMAGE, GAMEOVER_RECT = load_image('game_over.png', 190, 11, -1)
+RETBUTTON_RECT = RETBUTTON_IMAGE.get_rect()
+RETBUTTON_RECT.centerx = WIDTH / 2
+RETBUTTON_RECT.top = HEIGHT*0.52
+GAMEOVER_RECT = GAMEOVER_IMAGE.get_rect()
+GAMEOVER_RECT.centerx = WIDTH / 2
+GAMEOVER_RECT.centery = HEIGHT*0.35
 
-class game:
-    def __init__(self):
-        self.cactus_group = pygame.sprite.Group()
-        Cactus.containers = self.cactus_group
-        self.pteras_group = pygame.sprite.Group()
-        Ptera.containers = self.pteras_group
-        self.clouds_group = pygame.sprite.Group()
-        Cloud.containers = self.clouds_group
-        self.last_obstacle = pygame.sprite.Group()
+class HighscoreCaption(Scoreboard):
+    """Draws highscore caption"""
+    def __init__(self, ):
+        Scoreboard.__init__(self, WIDTH*0.78)
+        self.hi_image = pygame.Surface((22, NUMBER_HEIGHT))
+        self.hi_rect = self.hi_image.get_rect()
+        self.hi_rect.top = HEIGHT*0.1
+        self.hi_rect.left = WIDTH*0.73
+        self.hi_image.fill(BACKGROUND_COLOR)
+
+        # blit images on screen
+        letter_rect = NUMBERS_SHEET.rect.copy()
+        self.hi_image.blit(NUMBERS_SHEET.sprites[10], letter_rect)
+        letter_rect.left += NUMBERS_SHEET.rect.width
+        self.hi_image.blit(NUMBERS_SHEET.sprites[11], letter_rect)
+
+    def draw(self):
+        """Draw HI letters on screen for highscore"""
+        SCREEN.blit(self.hi_image, self.hi_rect)
+        super().draw()
+
+class GameState:
+    """Manages game"""
+    def __init__(self, show_high_score=True):
+        self.show_high_score = show_high_score
+        #objects
+        self._cactus_group = pygame.sprite.Group()
+        Cactus.containers = self._cactus_group
+        self._pteras_group = pygame.sprite.Group()
+        Ptera.containers = self._pteras_group
+        self._clouds_group = pygame.sprite.Group()
+        Cloud.containers = self._clouds_group
+        self._last_obstacle = pygame.sprite.Group()
         #player unit
-        self.player_dino = Dino(44,47)
+        self._player_dino = Dino(44, 47)
 
+
+        self.speedup_counter = 0 # counter controlling speed increase
+        #states
+        self.is_game_over = False
+        self.is_game_quit = False
         # scoreborads
-        self.scb = Scoreboard()
-        self.highsc = Scoreboard(width*0.78)
+        self._score_board = Scoreboard()
+        self._highscore_board = HighscoreCaption()
         self.ground = Ground()
         self.reset()
 
@@ -384,83 +436,86 @@ class game:
         self.is_game_quit = False
         self.speedup_counter = 0
 
-        self.cactus_group.empty()
-        self.clouds_group.empty()
-        self.pteras_group.empty()
-        self.last_obstacle.empty()
-        self.player_dino.reset()
+        self._cactus_group.empty()
+        self._clouds_group.empty()
+        self._pteras_group.empty()
+        self._last_obstacle.empty()
+        self._player_dino.reset()
 
     def handle_events(self):
+        """Reads collection of pygame input and reacts"""
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.is_game_quit = True
                 self.is_game_over = True
 
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_SPACE:
-                    if self.player_dino.rect.bottom == int(0.98*height):
-                        self.player_dino.isJumping = True
+                if event.key == pygame.K_SPACE or event.key == pygame.K_UP:
+                    if self._player_dino.rect.bottom == int(0.98*HEIGHT):
+                        self._player_dino.is_jumping = True
                         if pygame.mixer.get_init() != None:
-                            jump_sound.play()
-                        self.player_dino.movement[1] = -1*self.player_dino.jumpSpeed
+                            JUMP_SOUND.play()
+                        self._player_dino.movement[1] = -1*self._player_dino.jump_speed
 
                 if event.key == pygame.K_DOWN:
-                    if not (self.player_dino.isJumping and self.player_dino.isDead):
-                        self.player_dino.isDucking = True
+                    if not (self._player_dino.is_jumping and self._player_dino.is_dead):
+                        self._player_dino.is_ducking = True
 
             if event.type == pygame.KEYUP:
                 if event.key == pygame.K_DOWN:
-                    self.player_dino.isDucking = False
+                    self._player_dino.is_ducking = False
 
     def kill_player(self):
-        global high_score
         """Routine that marks players as dead, computes score, plays sounds tec."""
+        global HIGH_SCORE
         if self.is_game_over:
             return
-        self.player_dino.isDead = True
-        self.player_dino.isDucking = False
+        self._player_dino.is_dead = True
+        self._player_dino.is_ducking = False
         self.is_game_over = True
-        if self.player_dino.score > high_score:
-            high_score = self.player_dino.score
+        if self._player_dino.score > HIGH_SCORE:
+            HIGH_SCORE = self._player_dino.score
         if pygame.mixer.get_init() != None:
-            die_sound.play()
+            DIE_SOUND.play()
 
     def check_collisions(self):
-        for c in self.cactus_group:
-            c.movement[0] = -1*self.gamespeed
-            if pygame.sprite.collide_mask(self.player_dino,c):
-               self.kill_player()
-        for p in self.pteras_group:
-            p.movement[0] = -1*self.gamespeed
-            if pygame.sprite.collide_mask(self.player_dino,p):
+        """Check collisions between petras,cactuses and player dino"""
+        for cactus in self._cactus_group:
+            cactus.movement[0] = -1*self.gamespeed
+            if pygame.sprite.collide_mask(self._player_dino, cactus):
                 self.kill_player()
-        if len(self.cactus_group) < 2:
-            if len(self.cactus_group) == 0:
-                self.last_obstacle.empty()
-                self.last_obstacle.add(Cactus(self.gamespeed,40,40))
+        for ptera in self._pteras_group:
+            ptera.movement[0] = -1*self.gamespeed
+            if pygame.sprite.collide_mask(self._player_dino, ptera):
+                self.kill_player()
+        if len(self._cactus_group) < 2:
+            if not self._cactus_group:
+                self._last_obstacle.empty()
+                self._last_obstacle.add(Cactus(self.gamespeed, 40, 40))
             else:
-                for l in self.last_obstacle:
-                    if l.rect.right < width*0.7 and random.randrange(0,50) == 10:
-                        self.last_obstacle.empty()
-                        self.last_obstacle.add(Cactus(self.gamespeed, 40, 40))
+                for obstacle in self._last_obstacle:
+                    if obstacle.rect.right < WIDTH*0.7 and random.randrange(0, 50) == 10:
+                        self._last_obstacle.empty()
+                        self._last_obstacle.add(Cactus(self.gamespeed, 40, 40))
 
-        if len(self.pteras_group) == 0 and random.randrange(0,200) == 10 and self.speedup_counter > 500:
-            for l in self.last_obstacle:
-                if l.rect.right < width*0.8:
-                    self.last_obstacle.empty()
-                    self.last_obstacle.add(Ptera(self.gamespeed, 46, 40))
+        if not self._pteras_group and random.randrange(0, 200) == 10 and self.speedup_counter > 500:
+            for obstacle in self._last_obstacle:
+                if obstacle.rect.right < WIDTH*0.8:
+                    self._last_obstacle.empty()
+                    self._last_obstacle.add(Ptera(self.gamespeed, 46, 40))
 
-        if len(self.clouds_group) < 5 and random.randrange(0,300) == 10:
-            Cloud(width,random.randrange(height/5,height/2))
+        if len(self._clouds_group) < 5 and random.randrange(0, 300) == 10:
+            Cloud(WIDTH, random.randrange(HEIGHT/5, HEIGHT/2))
 
     def update(self):
-        self.player_dino.update()
-        self.cactus_group.update()
-        self.pteras_group.update()
-        self.clouds_group.update()
+        """Update game and all entities"""
+        self._player_dino.update()
+        self._cactus_group.update()
+        self._pteras_group.update()
+        self._clouds_group.update()
         self.ground.update()
-        self.scb.update(self.player_dino.score)
-        self.highsc.update(high_score)
+        self._score_board.update(self._player_dino.score)
+        self._highscore_board.update(HIGH_SCORE)
 
         if self.speedup_counter%700 == 699:
             self.ground.speed -= 1
@@ -468,22 +523,23 @@ class game:
         self.speedup_counter = (self.speedup_counter + 1)
 
     def draw(self):
+        """Draw all entities"""
         if pygame.display.get_surface() != None:
-            screen.fill(background_col)
+            SCREEN.fill(BACKGROUND_COLOR)
             self.ground.draw()
-            self.clouds_group.draw(screen)
-            self.scb.draw()
-            if high_score != 0:
-                self.highsc.draw()
-                screen.blit(HI_image,HI_rect)
-            self.cactus_group.draw(screen)
-            self.pteras_group.draw(screen)
-            self.player_dino.draw()
+            self._clouds_group.draw(SCREEN)
+            self._score_board.draw()
+            if HIGH_SCORE != 0:
+                self._highscore_board.draw()
+            self._cactus_group.draw(SCREEN)
+            self._pteras_group.draw(SCREEN)
+            self._player_dino.draw()
 
             pygame.display.update()
 
     def display_game_over(self):
-        if pygame.display.get_surface() == None:
+        """Display restart prompt"""
+        if pygame.display.get_surface() is None:
             print("Couldn't load display surface")
             self.is_game_quit = True
             self.is_game_over = False
@@ -498,24 +554,26 @@ class game:
                         self.is_game_over = False
                     if event.key == pygame.K_RETURN or event.key == pygame.K_SPACE:
                         self.is_game_over = False
-                        self.reset();
-        self.highsc.update(high_score)
+                        self.reset()
+        self._highscore_board.update(HIGH_SCORE)
         if pygame.display.get_surface() != None:
-            disp_gameOver_msg(retbutton_image,gameover_image)
-            if high_score != 0:
-                self.highsc.draw()
-                screen.blit(HI_image,HI_rect)
+            # game over message
+            SCREEN.blit(RETBUTTON_IMAGE, RETBUTTON_RECT)
+            SCREEN.blit(GAMEOVER_IMAGE, GAMEOVER_RECT)
+            if HIGH_SCORE != 0:
+                self._highscore_board.draw()
             pygame.display.update()
 
     def run(self):
-        global high_score
+        """Game loop"""
+        global HIGH_SCORE
         while not self.is_game_quit:
-            clock.tick(FPS)
+            CLOCK.tick(FPS)
             if self.is_game_over:
                 self.display_game_over()
 
             else:
-                if pygame.display.get_surface() == None:
+                if pygame.display.get_surface() is None:
                     print("Couldn't load display surface")
                     self.is_game_quit = True
                     self.is_game_over = True
@@ -524,14 +582,14 @@ class game:
                 self.check_collisions()
                 self.update()
                 self.draw()
-             
+
         pygame.quit()
         quit()
 
 def main():
-    isGameQuit = introscreen()
-    if not isGameQuit:
-        game().run()
+    """Runs intro, then game"""
+    introscreen()
+    GameState().run()
 
 if __name__ == '__main__':
-	main()
+    main()
