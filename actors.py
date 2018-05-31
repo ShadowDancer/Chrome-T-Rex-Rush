@@ -130,8 +130,8 @@ class Ptera(pygame.sprite.Sprite):
         ptera_sheet = RESOURCES.get_spritesheet(SpriteSheets.PTERA)
         self.ptera_sheet = ptera_sheet.resize(size_x, size_y)
         self.rect = self.ptera_sheet.rect.copy()
-        self.ptera_height = [HEIGHT*0.82, HEIGHT*0.75, HEIGHT*0.60]
-        self.rect.centery = self.ptera_height[random.randrange(0, 3)]
+        self.ptera_height = [HEIGHT*0.20, HEIGHT*0.82, HEIGHT*0.75, HEIGHT*0.60]
+        self.rect.centery = self.ptera_height[random.randrange(0, len(self.ptera_height))]
         self.rect.left = WIDTH + self.rect.width
         self.image = self.ptera_sheet.sprites[0]
         self.movement = [-1*speed, 0]
