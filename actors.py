@@ -8,7 +8,7 @@ from resources import RESOURCES, SpriteSheets, Images, Sounds
 
 GRAVITY = 0.6
 
-WIDTH, HEIGHT, SCREEN = 0, 0, None
+WIDTH, HEIGHT = 0, 0
 
 class Dino():
     """Defines dino and its behiavior"""
@@ -46,9 +46,9 @@ class Dino():
         self.rect.left = WIDTH/15
         self.movement = [0, 0] # reset dino
 
-    def draw(self):
+    def draw(self, render):
         """Draw itself"""
-        SCREEN.blit(self.image, self.rect)
+        render.blit(self.image, self.rect)
 
     def checkbounds(self):
         """Check collision with ground"""
@@ -112,9 +112,9 @@ class Cactus(pygame.sprite.Sprite):
         self.image = self.cactus_sheet.sprites[random.randrange(0, 3)]
         self.movement = [-1*speed, 0]
 
-    def draw(self):
+    def draw(self, render):
         """Draw"""
-        SCREEN.blit(self.image, self.rect)
+        render.blit(self.image, self.rect)
 
     def update(self):
         """Update"""
@@ -138,9 +138,9 @@ class Ptera(pygame.sprite.Sprite):
         self.index = 0
         self.counter = 0
 
-    def draw(self):
+    def draw(self, render):
         """Draw"""
-        SCREEN.blit(self.image, self.rect)
+        render.blit(self.image, self.rect)
 
     def update(self):
         """Update"""
@@ -164,10 +164,10 @@ class Ground():
         self.rect1.left = self.rect.right
         self.speed = speed
 
-    def draw(self):
+    def draw(self, render):
         """Draw"""
-        SCREEN.blit(self.image, self.rect)
-        SCREEN.blit(self.image, self.rect1)
+        render.blit(self.image, self.rect)
+        render.blit(self.image, self.rect1)
 
     def update(self):
         """Update"""
@@ -191,9 +191,9 @@ class Cloud(pygame.sprite.Sprite):
         self.rect.top = pos_y
         self.movement = [-1*self.speed, 0]
 
-    def draw(self):
+    def draw(self, render):
         """Draw"""
-        SCREEN.blit(self.image, self.rect)
+        render.blit(self.image, self.rect)
 
     def update(self):
         """Update"""
@@ -233,9 +233,9 @@ class Scoreboard():
             return digits
         return []
 
-    def draw(self):
+    def draw(self, render):
         """Draw"""
-        SCREEN.blit(self.image, self.rect)
+        render.blit(self.image, self.rect)
 
     def update(self, score):
         """Update"""
@@ -257,13 +257,12 @@ class Highscoreboard(Scoreboard):
         self.hi_rect.left = WIDTH*0.73
         self.hi_image.fill(BACKGROUND_COLOR)
 
-        # blit images on screen
         letter_rect = numbers_sheet.rect.copy()
         self.hi_image.blit(numbers_sheet.sprites[10], letter_rect)
         letter_rect.left += numbers_sheet.rect.width
         self.hi_image.blit(numbers_sheet.sprites[11], letter_rect)
 
-    def draw(self):
+    def draw(self, render):
         """Draw HI letters on screen for highscore"""
-        SCREEN.blit(self.hi_image, self.hi_rect)
-        super().draw()
+        render.blit(self.hi_image, self.hi_rect)
+        super().draw(render)

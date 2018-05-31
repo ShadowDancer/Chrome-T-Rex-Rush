@@ -8,7 +8,7 @@ from actors import Dino, Cactus, Ptera, Cloud, Ground, Scoreboard, Highscoreboar
 
 
 HIGH_SCORE = 0
-WIDTH, HEIGHT, SCREEN = 0, 0, None
+WIDTH, HEIGHT = 0, 0
 
 class Actions:
     """Holds collection of constants representing game actions"""
@@ -23,8 +23,8 @@ class BaseState():
     def __init__(self):
         self.finished = False # when gamestate is finished it should be swapped to next one
 
-    def draw(self):
-        """Prints current state to pygame screen"""
+    def draw(self, render):
+        """Prints current state to render"""
         pass
 
     def update(self, action):
@@ -152,20 +152,19 @@ class GameState(BaseState):
             self.gamespeed += 1
         self.speedup_counter = (self.speedup_counter + 1)
 
-    def draw(self):
+    def draw(self, render):
         """Draw all entities"""
-        if pygame.display.get_surface() != None:
-            SCREEN.fill(BACKGROUND_COLOR)
-            self.ground.draw()
-            self._clouds_group.draw(SCREEN)
-            self._score_board.draw()
-            if HIGH_SCORE != 0:
-                self._highscore_board.draw()
-            self._cactus_group.draw(SCREEN)
-            self._pteras_group.draw(SCREEN)
-            self._player_dino.draw()
+        render.begin()
+        self.ground.draw(render)
+        render.draw(self._clouds_group)
+        render.draw(self._cactus_group)
+        render.draw(self._pteras_group)
+        self._player_dino.draw(render)
 
-            pygame.display.update()
+        self._score_board.draw(render)
+        if HIGH_SCORE != 0:
+            self._highscore_board.draw(render)
+        pygame.display.update()
 
 class IntroState(BaseState):
     """State displaying intro for game"""
@@ -200,14 +199,13 @@ class IntroState(BaseState):
         if not self.temp_dino.is_jumping and not self.temp_dino.is_blinking:
             self.finished = True
 
-    def draw(self):
-        SCREEN.fill(BACKGROUND_COLOR)
-        SCREEN.blit(self.ground_sheet.sprites[0], self.ground_sheet.rect)
+    def draw(self, render):
+        render.begin()
+        render.blit(self.ground_sheet.sprites[0], self.ground_sheet.rect)
         if self.temp_dino.is_blinking:
-            SCREEN.blit(self.logo, self.logo_rect)
-            SCREEN.blit(self.callout, self.callout_rect)
-        self.temp_dino.draw()
-        pygame.display.update()
+            render.blit(self.logo, self.logo_rect)
+            render.blit(self.callout, self.callout_rect)
+        self.temp_dino.draw(render)
 
 class GameOverState(BaseState):
     """State displayed when player dies with restart prompt"""
@@ -231,10 +229,9 @@ class GameOverState(BaseState):
 
         self._highscore_board.update(HIGH_SCORE)
 
-    def draw(self):
+    def draw(self, render):
         """game over message"""
-        SCREEN.blit(self.retbutton_image, self.retbutton_rect)
-        SCREEN.blit(self.gameover_image, self.gameover_rect)
+        render.blit(self.retbutton_image, self.retbutton_rect)
+        render.blit(self.gameover_image, self.gameover_rect)
         if HIGH_SCORE != 0:
-            self._highscore_board.draw()
-        pygame.display.update()
+            self._highscore_board.draw(render)

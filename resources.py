@@ -6,6 +6,25 @@ from pygame import RLEACCEL
 BACKGROUND_COLOR = (235, 235, 235)
 NUMBER_HEIGHT = int(11*6/5) # wysokość znaku
 
+
+class Render:
+    """Responsible for rendering sprites, allows rendering to image"""
+
+    def __init__(self, surface):
+        self.surface = surface
+
+    def begin(self):
+        """Begins drawing new frame"""
+        self.surface.fill(BACKGROUND_COLOR)
+
+    def blit(self, surface, rect):
+        """Blits surface on internal rect"""
+        self.surface.blit(surface, rect)
+
+    def draw(self, sprite_group):
+        """Draws sprite group on render"""
+        sprite_group.draw(self.surface)
+
 def _make_image(size_x=-1, size_y=-1, colorkey=-1):
     """Craetes dictionary with image metadata"""
     return {
@@ -141,7 +160,6 @@ def load_sprite_sheet(spritesheet_id):
     colorkey = data.get('colorkey')
 
     sheet = pygame.image.load(fullname)
-    sheet = sheet.convert()
     sheet_rect = sheet.get_rect()
     sprites = []
 
@@ -151,7 +169,8 @@ def load_sprite_sheet(spritesheet_id):
         for j in range(0, frames_x):
             rect = pygame.Rect((j*size_x, i*size_y, size_x, size_y))
             image = pygame.Surface(rect.size)
-            image = image.convert()
+            if pygame.display.get_surface():
+                image = image.convert()
             image.blit(sheet, (0, 0), rect)
 
             if colorkey is not None:
@@ -175,7 +194,9 @@ def load_image(image_id):
 
     fullname = os.path.join('sprites', image_id + '.png')
     image = pygame.image.load(fullname)
-    image = image.convert()
+
+    if pygame.display.get_surface():
+        image = image.convert()
     if colorkey is not None:
         if colorkey is -1:
             colorkey = image.get_at((0, 0))

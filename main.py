@@ -6,22 +6,25 @@ import pygame
 import game_state as gs
 from game_state import Actions
 
-pygame.init()
-SCR_SIZE = (WIDTH, HEIGHT) = (600, 150)
-SCREEN = pygame.display.set_mode(SCR_SIZE)
+from resources import Render
 
 import actors
+
+pygame.display.init()
+pygame.mixer.init()
+
+SCR_SIZE = (WIDTH, HEIGHT) = (600, 150)
 actors.WIDTH = WIDTH
 actors.HEIGHT = HEIGHT
-actors.SCREEN = SCREEN
 
 gs.WIDTH = WIDTH
 gs.HEIGHT = HEIGHT
-gs.SCREEN = SCREEN
 
 FPS = 60
-
 CLOCK = pygame.time.Clock()
+
+screen = pygame.display.set_mode(SCR_SIZE, pygame.HWSURFACE|pygame.DOUBLEBUF)
+
 pygame.display.set_caption("T-Rex Rush")
 
 class KeyboardController:
@@ -42,27 +45,33 @@ class Game:
     """Responsible for managing game states and game loop"""
     def __init__(self, instrumented=False):
 
+        self.instrumented = instrumented
         if not instrumented:
             self.controller = KeyboardController()
-
-        self.state = gs.IntroState()
         self.is_game_quit = False
+        self.state = None
 
     def run(self):
         """Game loop"""
-        if pygame.display.get_surface() is None:
-            print("Couldn't load display surface")
-            self.is_game_quit = True
+
+        render = Render(screen)
+        if not self.instrumented:
+            self.state = gs.IntroState()
+        else:
+            self.state = gs.GameState()
 
         while not self.is_game_quit:
-                CLOCK.tick_busy_loop(FPS)
+            CLOCK.tick_busy_loop(FPS)
 
             self.handle_pygame_evens()
             action = self.get_action()
 
             if not self.is_game_quit:
                 self.state.update(action)
-                self.state.draw()
+
+                self.state.draw(render)
+                pygame.display.flip()
+
                 if self.state.finished:
                     if isinstance(self.state, gs.GameState):
                         self.state = gs.GameOverState()
