@@ -3,7 +3,7 @@ import os
 import pygame
 from pygame import RLEACCEL
 
-BACKGROUND_COLOR = (235, 235, 235)
+BACKGROUND_COLOR = (255, 255, 255)
 NUMBER_HEIGHT = int(11*6/5) # wysokość znaku
 
 
