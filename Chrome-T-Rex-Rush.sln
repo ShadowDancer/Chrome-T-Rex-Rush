@@ -1,0 +1,36 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.27703.2026
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "Chrome-T-Rex-Rush", "src\chrome_t_rex_rush_gym\chrome_t_rex_rush\Chrome-T-Rex-Rush.pyproj", "{479DEF7B-C729-4201-98FE-450BB394D797}"
+EndProject
+Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "Chrome-T-Rex-Rush-Gym", "src\chrome_t_rex_rush_gym\Chrome-T-Rex-Rush-Gym.pyproj", "{5A6AEA94-8421-4E42-8A2D-90470F1728AA}"
+EndProject
+Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "T-Rex-Teacher", "src\T-Rex-Teacher\T-Rex-Teacher.pyproj", "{AA5B584A-EF7C-41FC-B67F-B32EB84E6755}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{CF3B70AF-EBC6-427A-A0F2-6E0F04E0ED1F}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{479DEF7B-C729-4201-98FE-450BB394D797}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{479DEF7B-C729-4201-98FE-450BB394D797}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5A6AEA94-8421-4E42-8A2D-90470F1728AA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5A6AEA94-8421-4E42-8A2D-90470F1728AA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AA5B584A-EF7C-41FC-B67F-B32EB84E6755}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AA5B584A-EF7C-41FC-B67F-B32EB84E6755}.Release|Any CPU.ActiveCfg = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {F9D3DDA3-BDBF-4D76-AF88-D3357A2BC6BE}
+	EndGlobalSection
+EndGlobal

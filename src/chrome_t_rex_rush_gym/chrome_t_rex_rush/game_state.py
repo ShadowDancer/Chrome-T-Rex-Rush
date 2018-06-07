@@ -2,13 +2,13 @@
 import random
 import pygame
 
+from constants import WIDTH, HEIGHT
 from resources import RESOURCES, SpriteSheets, Images, Sounds, BACKGROUND_COLOR
 
 from actors import Dino, Cactus, Ptera, Cloud, Ground, Scoreboard, Highscoreboard
 
 
 HIGH_SCORE = 0
-WIDTH, HEIGHT = 0, 0
 
 class Actions:
     """Holds collection of constants representing game actions"""
@@ -66,6 +66,7 @@ class GameState(BaseState):
         self.ground.speed = -1*self.gamespeed
         self.is_game_over = False
         self.is_game_quit = False
+        self.finished = False
         self.speedup_counter = 0
 
         self._cactus_group.empty()
@@ -79,8 +80,7 @@ class GameState(BaseState):
         if action == Actions.JUMP:
             if self._player_dino.rect.bottom == int(0.98*HEIGHT):
                 self._player_dino.is_jumping = True
-                if pygame.mixer.get_init() != None:
-                    self.jump_sound.play()
+                self.jump_sound.play()
                 self._player_dino.movement[1] = -1*self._player_dino.jump_speed
 
         if action == Actions.DUCK:
@@ -100,8 +100,7 @@ class GameState(BaseState):
         self.finished = True
         if self._player_dino.score > HIGH_SCORE:
             HIGH_SCORE = self._player_dino.score
-        if pygame.mixer.get_init() != None:
-            self.die_sound.play()
+        self.die_sound.play()
 
     def check_collisions(self):
         """Check collisions between petras,cactuses and player dino"""
@@ -164,7 +163,6 @@ class GameState(BaseState):
         self._score_board.draw(render)
         if HIGH_SCORE != 0:
             self._highscore_board.draw(render)
-        pygame.display.update()
 
 class IntroState(BaseState):
     """State displaying intro for game"""

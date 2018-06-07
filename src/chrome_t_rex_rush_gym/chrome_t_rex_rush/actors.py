@@ -3,12 +3,11 @@
 import random
 import pygame
 
+from constants import WIDTH, HEIGHT
 from resources import NUMBER_HEIGHT, BACKGROUND_COLOR
 from resources import RESOURCES, SpriteSheets, Images, Sounds
 
 GRAVITY = 0.6
-
-WIDTH, HEIGHT = 0, 0
 
 class Dino():
     """Defines dino and its behiavior"""
@@ -94,8 +93,8 @@ class Dino():
         if not self.is_dead and self.counter % 7 == 6 and not self.is_blinking:
             self.score += 1
             if self.score % 100 == 0 and self.score != 0:
-                if pygame.mixer.get_init() != None:
-                    self.checkpoint_sound.play()
+                self.checkpoint_sound.play()
+                    
 
         self.counter = (self.counter + 1)
 

@@ -93,11 +93,17 @@ class SpriteSheets:
         }
     }
 
+class DummySound():
+    """Special case for sound object if there is no sound initiazlised"""
+
+    def play(self):
+        """Nooop"""
+        pass
+
 class ResourceManager():
     """Class responsible for loading and storage of resources"""
 
     def __init__(self):
-
         self.sheets = {}
         self.images = {}
         self.sounds = {}
@@ -112,6 +118,9 @@ class ResourceManager():
 
     def get_sound(self, sound_id):
         """returns sound from cache or disk"""
+        if pygame.mixer.get_init() == None:
+            return DummySound()
+
         sound = self.sounds.get(sound_id)
         if not sound:
             sound = load_sound(sound_id)

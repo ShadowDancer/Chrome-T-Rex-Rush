@@ -1,31 +1,16 @@
-"""Dino game from chrome"""
-__author__ = "Shivam Shekhar,ShadowDancer"
+"""Defines game class with game loop logic"""
 
 import pygame
 
 import game_state as gs
 from game_state import Actions
-
 from resources import Render
-
-import actors
-
-pygame.display.init()
-pygame.mixer.init()
-
-SCR_SIZE = (WIDTH, HEIGHT) = (600, 150)
-actors.WIDTH = WIDTH
-actors.HEIGHT = HEIGHT
-
-gs.WIDTH = WIDTH
-gs.HEIGHT = HEIGHT
+from constants import SCR_SIZE
 
 FPS = 60
 CLOCK = pygame.time.Clock()
 
-screen = pygame.display.set_mode(SCR_SIZE, pygame.HWSURFACE|pygame.DOUBLEBUF)
-
-pygame.display.set_caption("T-Rex Rush")
+_INIT = False
 
 class KeyboardController:
     """Translates input from keyboard into game actions"""\
@@ -43,22 +28,25 @@ class KeyboardController:
 
 class Game:
     """Responsible for managing game states and game loop"""
-    def __init__(self, instrumented=False):
+    def __init__(self, controller=KeyboardController()):
+        global _INIT
+        if not _INIT:
+            pygame.display.init()
+            pygame.mixer.init()
+            screen = pygame.display.set_mode(SCR_SIZE, pygame.HWSURFACE|pygame.DOUBLEBUF)
+            pygame.display.set_caption("T-Rex Rush")
+            _INIT = True
 
-        self.instrumented = instrumented
-        if not instrumented:
-            self.controller = KeyboardController()
+        self.controller = controller
         self.is_game_quit = False
         self.state = None
+        self.render = Render(screen)
+        self.state = gs.IntroState()
+
 
     def run(self):
         """Game loop"""
 
-        render = Render(screen)
-        if not self.instrumented:
-            self.state = gs.IntroState()
-        else:
-            self.state = gs.GameState()
 
         while not self.is_game_quit:
             CLOCK.tick_busy_loop(FPS)
@@ -68,8 +56,7 @@ class Game:
 
             if not self.is_game_quit:
                 self.state.update(action)
-
-                self.state.draw(render)
+                self.state.draw(self.render)
                 pygame.display.flip()
 
                 if self.state.finished:
@@ -92,5 +79,3 @@ class Game:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.is_game_quit = True
-if __name__ == '__main__':
-    Game().run()

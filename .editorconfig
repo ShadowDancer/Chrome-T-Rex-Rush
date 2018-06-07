@@ -1,0 +1,11 @@
+# To learn more about .editorconfig see https://aka.ms/editorconfigdocs
+
+# All files
+[*]
+indent_style = space
+
+# Xml files
+[*.py]
+indent_size = 4
+
+charset = utf-8
