@@ -46,11 +46,15 @@
     <Compile Include="game.py" />
     <Compile Include="envs\game_instrumented.py" />
     <Compile Include="game_state.py" />
+    <Compile Include="learning\vector_trainer.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="main.py" />
     <Compile Include="resources.py" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="envs\" />
+    <Folder Include="learning\" />
     <Folder Include="sprites\" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />

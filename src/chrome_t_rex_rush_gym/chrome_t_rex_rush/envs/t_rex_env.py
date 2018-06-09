@@ -39,7 +39,7 @@ class TRexEnvBase(gym.Env):
         """Sets random state for game operations"""
         pass
 
-    def _process_observation(self, observation):
+    def _transform_observation(self, observation):
         """Converts surface to grayscale np array"""
 
         
@@ -69,12 +69,12 @@ class TRexEnvBase(gym.Env):
 
     def single_step(self, action):
         """Pass action to environment, execute one step and return reward"""
-        observation, done, score, screen = self.game.step(action)
+        return self.process_step(*self.game.step(action))
+
+    def process_step(self, observation, done, score, screen):
         self.screen = screen
-        self.observation = self._process_observation(observation)
-
+        self.observation = self._transform_observation(observation)
         self.reward = 1
-
         if done: # game over
             if self.steps_beyond_done == None:
                 self.reward = -1 # just died
@@ -88,10 +88,10 @@ class TRexEnvBase(gym.Env):
 
     def reset(self):
         """Restore environemnt to original state. Returns first observations"""
-        self.game.reset()
+        a, b, c, d = self.process_step(*self.game.reset())
         self.steps_beyond_done = None
         self.reward = 0
-        pass
+        return a, b, c, d
 
     def render(self, mode='human'):
         """Render environment"""

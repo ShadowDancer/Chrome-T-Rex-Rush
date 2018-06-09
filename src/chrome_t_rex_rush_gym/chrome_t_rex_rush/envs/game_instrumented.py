@@ -18,6 +18,9 @@ class GameInstrumented:
         
     def reset(self):
         self.state.reset()
+        self.render.begin()
+        self.state.draw(self.render)
+        return self.get_observation()
 
 class GameRgbInstrumented(GameInstrumented):
     """Chrome-T-Rex-Game instrumented for RGB display"""
@@ -32,7 +35,9 @@ class GameRgbInstrumented(GameInstrumented):
             self.render.begin()
             self.state.update(action)
             self.state.draw(self.render)
-            
+        return self.get_observation()
+
+    def get_observation():
         screen = pygame.surfarray.array3d(self.render.surface)
         screen.swapaxes(0,1)
         finished = self.state.finished
@@ -53,8 +58,9 @@ class GameVectorInstrumented(GameInstrumented):
             self.render.begin()
             self.state.update(action)
             self.state.draw(self.render)
+        return self.get_observation()
             
-        
+    def get_observation(self):
         state = self.state
         speed = state.gamespeed
         dino_y = state._player_dino.rect.bottom
