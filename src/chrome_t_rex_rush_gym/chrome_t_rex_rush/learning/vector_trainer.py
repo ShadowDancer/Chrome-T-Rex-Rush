@@ -4,12 +4,16 @@ import gym
 
 from envs.t_rex_env import TRexEnvVector
 
-class MyModel():
+class MyModel(TensorflowAgent):
 
-    def __init__(self, session, input_size, actions_size, hidden_size=8, hidden_count=1):
-        
+    def __init__(self, input_size, actions_size, hidden_size=8, hidden_count=1):
+        super().__init__()
+
+        self.gamma = 0.99
+        self.lr = 1e-2
+        self.memory_buffer = []
+
         with tf.name_scope('model'):
-            self.sess = session
             self.input_tensor = x = tf.placeholder(tf.float32, [None, input_size], "observation_in")
     
             for i in range(hidden_count):
@@ -28,15 +32,36 @@ class MyModel():
 
             indexes = tf.range(0, tf.shape(self.output)[0]) * tf.shape(self.output)[1] + self.action_holder
             responsible_outputs = tf.gather(tf.reshape(self.output, [-1]), indexes)
-            loss = tf.reduce_mean(tf.log(responsible_outputs) * self.reward_holder, name="Loss")
+            self.loss = tf.reduce_mean(tf.log(responsible_outputs) * self.reward_holder, name="Loss")
 
-            tf.summary.scalar('loss', loss)
+            tf.summary.scalar('loss', self.loss)
 
-            self.optimizer = tf.train.AdamOptimizer( learning_rate=1e-2).minimize(loss)
+            #self.optimizer = tf.train.AdamOptimizer( learning_rate=1e-2).minimize(loss)
             self.summary = tf.summary.merge_all()
             self.summary_writer = tf.summary.FileWriter('logs/model')
 
-        
+            tvars = tf.trainable_variables()
+            self.gradient_holders = []
+            for idx,var in enumerate(tvars):
+                placeholder = tf.placeholder(tf.float32,name=str(idx)+'_holder')
+                self.gradient_holders.append(placeholder)
+            self.gradients = tf.gradients(self.loss,tvars)
+            optimizer = tf.train.AdamOptimizer(learning_rate=self.lr)
+            self.update_batch = optimizer.apply_gradients(zip(self.gradient_holders,tvars))
+
+    def setup(self):
+        self.memory_buffer = [] 
+        self.sess.run(tf.global_variables_initializer())
+        self.gradBuffer = self.sess.run(tf.trainable_variables())
+        for ix,grad in enumerate(self.gradBuffer):
+            self.gradBuffer[ix] = grad * 0
+
+    def act(self, observation):
+        """Computes next action based on given observations"""
+        action = self.sess.run(self.output, feed_dict={
+            self.input_tensor: observation})
+
+        return self.map_action(action[0])
     def map_action(self, q_values, learning=True):
         """Returns action accounting for exploration factor"""
         if learning:
@@ -44,13 +69,44 @@ class MyModel():
 
         return np.argmax(q_values)
         
+    def observe(self, observation, reward, action):
+        self.memory_buffer.append([observation, action, reward])
 
-    def act(self, obs):
-        """Computes next action based on given observations"""
-        action = self.sess.run(self.output, feed_dict={
-            self.input_tensor: obs})
+    def next_episode(self, episode):
+        sess = self.sess
 
-        return self.map_action(action[0])
+        if len(self.memory_buffer) == 0:
+            return
+
+        memory_buffer = np.array(self.memory_buffer)
+        self.memory_buffer = []
+        memory_buffer[:,2] = self.discount_rewards(memory_buffer[:,2])
+         # posumuj nagrody mniejszając znaczenia nagrody wraz z kolejnymi akcjami
+        feed_dict={# przekształcenie bufora w słownik
+                self.reward_holder:memory_buffer[:,2],
+                self.action_holder:memory_buffer[:,1],
+                self.input_tensor:np.vstack(memory_buffer[:,0])}
+
+        summary, grads = sess.run([self.summary, self.gradients], feed_dict=feed_dict)
+        self.summary_writer.add_summary(summary, i)
+
+        for idx,grad in enumerate(grads):
+            self.gradBuffer[idx] += grad
+
+        if episode % 5 == 0 and episode != 0:
+            feed_dict= dictionary = dict(zip(self.gradient_holders, self.gradBuffer))
+            _ = sess.run(self.update_batch, feed_dict=feed_dict)
+            for ix,grad in enumerate(self.gradBuffer):
+                self.gradBuffer[ix] = grad * 0
+
+    def discount_rewards(self, r):
+        """ take 1D float array of rewards and compute discounted reward """
+        discounted_r = np.zeros_like(r)
+        running_add = 0
+        for t in reversed(range(0, r.size)):
+            running_add = running_add * self.gamma + r[t]
+            discounted_r[t] = running_add
+        return discounted_r
 
     def save(self, fileName):
         """Saves model to file"""
@@ -67,25 +123,17 @@ class MyModel():
         saver = tf.train.Saver(tf.trainable_variables())
         saver.restore(self.sess, fileName)
 
-def discount_rewards(r, gamma):
-    """ take 1D float array of rewards and compute discounted reward """
-    discounted_r = np.zeros_like(r)
-    running_add = 0
-    for t in reversed(range(0, r.size)):
-        running_add = running_add * gamma + r[t]
-        discounted_r[t] = running_add
-    return discounted_r
 
-def make_model(env, sess):
+def make_model(env):
     input_size = np.prod(env.observation_space.shape)
     actions_size = np.prod(env.action_space.n)
 
-    model = MyModel(sess, input_size, actions_size)
+    model = MyModel(input_size, actions_size)
     return model
 
 def episode(model, i, batches=30):
-    memory_buffer = []
 
+    model.setup()
     episode_rewards = []
     for x in range(batches):
         obs = env.reset()
@@ -95,39 +143,26 @@ def episode(model, i, batches=30):
         while not done:
             action = model.act([obs])
             new_obs, reward, done, _ = env.step(action)
+            model.observe(obs, action, reward)
             #env.render()
             episode_reward += reward
-            memory_buffer.append([obs, action, reward])
+            model.next_episode(i)
+            
             obs = new_obs
         episode_rewards.append(episode_reward)
     print("Training batch: ", np.mean(episode_rewards))
 
-    memory_buffer = np.array(memory_buffer)
-    np.random.shuffle(memory_buffer)
-    memory_buffer[:,2] = discount_rewards(memory_buffer[:,2], 0.99)
-    
-
-    summary, _ = sess.run([model.summary, model.optimizer], feed_dict={
-        model.input_tensor:np.vstack(memory_buffer[:,0]),
-        model.action_holder: memory_buffer[:,1],
-        model.reward_holder: memory_buffer[:,2]
-        })
-    model.summary_writer.add_summary(summary, i)
 
 
 
 
 
     
-sess = tf.Session()
 #env = TRexEnvVector()
 env =  gym.make('CartPole-v0')
-model = make_model(env, sess)
-
-
-sess.run(tf.global_variables_initializer())
-
-i = 0
-while True:
-    i += 1
-    episode(model, i)
+model = make_model(env)
+with model:
+    i = 0
+    while True:
+        i += 1
+        episode(model, i)
