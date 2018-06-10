@@ -1,4 +1,4 @@
-from base_agent import BaseAgent
+from learning.base_agent import BaseAgent
 
 import tensorflow as tf
 

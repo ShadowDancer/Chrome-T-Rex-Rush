@@ -15,6 +15,7 @@ class GameInstrumented:
         self.state = game_state.GameState()
         self.screen = pygame.Surface(SCR_SIZE)
         self.render = Render(self.screen)
+        self.frames_per_step = 4
         
     def reset(self):
         self.state.reset()
@@ -33,7 +34,8 @@ class GameRgbInstrumented(GameInstrumented):
 
         if not self.state.finished:
             self.render.begin()
-            self.state.update(action)
+            for i in range(self.frames_per_step):
+                self.state.update(action)
             self.state.draw(self.render)
         return self.get_observation()
 
@@ -56,7 +58,8 @@ class GameVectorInstrumented(GameInstrumented):
 
         if not self.state.finished:
             self.render.begin()
-            self.state.update(action)
+            for i in range(self.frames_per_step):
+                self.state.update(action)
             self.state.draw(self.render)
         return self.get_observation()
             

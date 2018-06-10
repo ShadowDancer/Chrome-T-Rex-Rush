@@ -23,7 +23,6 @@ def run_agent(agent, env, episodes=100, frames=200, learn=True, visualize=None):
         for t in range(frames):
             if not visualize is None:
                 env.render(mode=visualize)
-
             action = agent.act(observation, env.action_space)
             old_observation = observation
             observation, reward, done, info = env.step(action)
@@ -38,9 +37,9 @@ def run_agent(agent, env, episodes=100, frames=200, learn=True, visualize=None):
                     mean = np.mean(rewards)
                     std = np.std(rewards)
                     print("100 episodes reward mean: " + format_float(mean) + " std: " + format_float(std))
-                    if learn and len(means) > 5 and mean > max(means):
-                        agent.save(file)
-                        print('Saving agent with score ' + format_float(mean) + ' in ' + file)
+                    #if learn and len(means) > 5 and mean > max(means):
+                        #agent.save(file)
+                        #print('Saving agent with score ' + format_float(mean) + ' in ' + file)
                     means.append(mean)
                 break
         agent.next_episode(episode)

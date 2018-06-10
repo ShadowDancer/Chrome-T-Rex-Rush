@@ -45,6 +45,10 @@
     <Compile Include="game.py" />
     <Compile Include="envs\game_instrumented.py" />
     <Compile Include="game_state.py" />
+    <Compile Include="learning\base_agent.py" />
+    <Compile Include="learning\dqn_agent.py" />
+    <Compile Include="learning\tensorflow_agent.py" />
+    <Compile Include="learning\trainer.py" />
     <Compile Include="learning\vector_trainer.py">
       <SubType>Code</SubType>
     </Compile>

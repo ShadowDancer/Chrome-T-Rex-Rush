@@ -26,10 +26,6 @@ class TRexEnvBase(gym.Env):
 
         self.action_space = spaces.Discrete(3)
 
-        self.step_skip = 1 # repeat action n times
-
-        
-
         # for render
         self.display = None
         self.screen = None
@@ -57,19 +53,9 @@ class TRexEnvBase(gym.Env):
         return array
 
     def step(self, action):
-        rewards = []
-        obs, rew, done, dbg = None, None, None, {}
-        for i in range(self.step_skip):
-            obs, rew, done, dbg = self.single_step(action)
-            rewards.append(rew)
-            if done:
-                return obs, np.mean(rewards), done, dbg
-        return obs, np.mean(rewards), done, dbg
-
-
-    def single_step(self, action):
-        """Pass action to environment, execute one step and return reward"""
         return self.process_step(*self.game.step(action))
+
+
 
     def process_step(self, observation, done, score, screen):
         self.screen = screen
@@ -88,22 +74,22 @@ class TRexEnvBase(gym.Env):
 
     def reset(self):
         """Restore environemnt to original state. Returns first observations"""
-        a, b, c, d = self.process_step(*self.game.reset())
+        observation, _, _, _ = self.process_step(*self.game.reset())
         self.steps_beyond_done = None
         self.reward = 0
-        return a, b, c, d
+        return observation
 
     def render(self, mode='human'):
         """Render environment"""
-        
-        pygame.time.Clock().tick(60)
+
         object = self.observation
         if mode == 'human':
             object = self.screen
 
-        if not self.graphics_mode:
-            # can't print vector
-            return
+        else:
+            if not self.graphics_mode:
+                # can't print vector
+                return
 
         if self.observation is None or not self.observation.any():
             return
