@@ -1,15 +1,17 @@
 
 import tensorflow as tf
 import numpy as np
+import shutil
 
 from learning.tensorflow_agent import TensorflowAgent
 
 class QNetworkAgent(TensorflowAgent):
     """Test agent executing random ctions"""
-    def __init__(self, obs_space, ats_space):
+    def __init__(self, name, obs_space, ats_space):
         TensorflowAgent.__init__(self)
         
-        self.gamma = 0.95
+        self.name = name
+        self.gamma = 0.99
         self.lr = 1e-2
         self.episode = 0
 
@@ -41,7 +43,7 @@ class QNetworkAgent(TensorflowAgent):
             self.indices = tf.range(0, tf.shape(self.output)[0]) * tf.shape(self.output)[1] + self.action_holder
             self.choosen_outputs = tf.gather(tf.reshape(self.output, [-1]), self.indices)
             self.loss = -tf.reduce_mean(tf.log(self.choosen_outputs) * self.reward_holder)        
-            tf.summary.scalar('loss', self.loss)
+            tf.summary.scalar('loss', self.loss) 
         
             # gradient
             tvars = tf.trainable_variables()
@@ -103,10 +105,10 @@ class QNetworkAgent(TensorflowAgent):
         else:
             self.replay_buffer.extend(list_buffer)
         
-        buffer_size = 10000000
+        buffer_size = 10000
         buffer_len = len(self.replay_buffer)
         if buffer_len > buffer_size:
-            self.replay_buffer[len] = self.replay_buffer[len-buffer_size:]
+            self.replay_buffer = self.replay_buffer[buffer_len-buffer_size:]
         buffer_len = len(self.replay_buffer)
         
         sample_indices = np.random.choice(buffer_len, size=np.min([buffer_len, 200]), replace=False)

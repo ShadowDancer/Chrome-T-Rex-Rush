@@ -1,6 +1,6 @@
 import numpy as np
 import time
-
+import os
 def format_float(f):
     return format(f, '07.2f')
 
@@ -13,8 +13,11 @@ def run_agent(agent, env, episodes=100, frames=1000, learn=True, visualize=None)
 
     env.reset() 
     agent.setup()
-    #file = 'saves/' + env_split[0] + '/' + type(agent).__name__ + '/' + FLAGS.name
-        #agent.load(file)
+    dir = 'saves/agents/' + agent.name + "/"
+    file = dir + agent.name
+    if os.path.isdir(dir): 
+        print("Loading agent from " + file)
+        agent.load(file)
 
     for episode in range(episodes):
         observation = env.reset()
@@ -38,9 +41,9 @@ def run_agent(agent, env, episodes=100, frames=1000, learn=True, visualize=None)
                     std = np.std(rewards)
                     max = np.max(rewards)
                     print("100 episodes reward mean: " + format_float(mean) + " std: " + format_float(std) + " max: " + format_float(max))
-                    #if learn and len(means) > 5 and mean > max(means):
-                        #agent.save(file)
-                        #print('Saving agent with score ' + format_float(mean) + ' in ' + file)
+                    if learn and len(means) > 5 and mean > np.max(means):
+                        agent.save(file)
+                        print('Saving agent with score ' + format_float(mean) + ' in ' + file)
                     means.append(mean)
                 break
         agent.next_episode(episode)

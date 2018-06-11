@@ -6,3 +6,4 @@ dist
 __pycache__
 .vs/
 src/chrome_t_rex_rush_gym/chrome_t_rex_rush/logs
+src/chrome_t_rex_rush_gym/chrome_t_rex_rush/saves/

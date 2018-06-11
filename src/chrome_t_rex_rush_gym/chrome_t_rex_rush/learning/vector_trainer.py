@@ -8,11 +8,15 @@ from learning.dqn_agent import QNetworkAgent
 
 
 
-env = TRexEnvVector()
-#env =  gym.make('CartPole-v0')
+#env = TRexEnvVector()
 
 
-model = QNetworkAgent(env.observation_space, env.action_space)
+name = 'CartPole-v0'
 
-#run_agent(model, env, 100000)
-run_agent(model, env, 100000, visualize='human')
+env =  gym.make(name)
+
+
+model = QNetworkAgent(name, env.observation_space, env.action_space)
+
+run_agent(model, env, 100000)
+#run_agent(model, env, 100000, visualize='human', learn=False)
