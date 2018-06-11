@@ -2,7 +2,7 @@
 __author__ = "Shivam Shekhar,ShadowDancer"
 
 
-
+import gym
 from envs.t_rex_env import TRexEnvRgb
 
 

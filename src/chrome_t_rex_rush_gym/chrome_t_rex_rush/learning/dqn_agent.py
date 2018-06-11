@@ -4,14 +4,14 @@ import numpy as np
 
 from learning.tensorflow_agent import TensorflowAgent
 
-
 class QNetworkAgent(TensorflowAgent):
     """Test agent executing random ctions"""
     def __init__(self, obs_space, ats_space):
         TensorflowAgent.__init__(self)
         
-        self.gamma = 0.99
+        self.gamma = 0.95
         self.lr = 1e-2
+        self.episode = 0
 
         i_size = np.prod(obs_space.shape)
         a_size = np.prod(ats_space.n)
@@ -38,9 +38,9 @@ class QNetworkAgent(TensorflowAgent):
             tf.summary.histogram('action-historgram', self.action_holder)
 
             # corss entrophy
-            self.indexes = tf.range(0, tf.shape(self.output)[0]) * tf.shape(self.output)[1] + self.action_holder
-            self.responsible_outputs = tf.gather(tf.reshape(self.output, [-1]), self.indexes)
-            self.loss = -tf.reduce_mean(tf.log(self.responsible_outputs) * self.reward_holder)        
+            self.indices = tf.range(0, tf.shape(self.output)[0]) * tf.shape(self.output)[1] + self.action_holder
+            self.choosen_outputs = tf.gather(tf.reshape(self.output, [-1]), self.indices)
+            self.loss = -tf.reduce_mean(tf.log(self.choosen_outputs) * self.reward_holder)        
             tf.summary.scalar('loss', self.loss)
         
             # gradient
@@ -51,7 +51,7 @@ class QNetworkAgent(TensorflowAgent):
                 self.gradient_holders.append(placeholder)
 
             self.gradients = tf.gradients(self.loss,tvars)
-        
+
             optimizer = tf.train.AdamOptimizer(learning_rate=self.lr)
             self.update_batch = optimizer.apply_gradients(zip(self.gradient_holders,tvars))
             self.summary = tf.summary.merge_all()
@@ -59,6 +59,7 @@ class QNetworkAgent(TensorflowAgent):
 
     def setup(self):
         self.memory_buffer = [] # bufor na obserwacje
+        self.replay_buffer = []
         #inicializuj tensorflow
         self.sess.run(tf.global_variables_initializer())    
         self.gradBuffer = self.sess.run(tf.trainable_variables())
@@ -67,12 +68,15 @@ class QNetworkAgent(TensorflowAgent):
             
 
     def act(self, observation, action_space):
-        q_values = self.sess.run(self.output,feed_dict={
-            self.input:[observation]
-            })[0]
-       
-        action = np.random.choice(q_values,p=q_values)
-        action = np.argmax(q_values == action)
+        e = 0.1
+        if np.random.rand(1) < e:
+            action = action_space.sample()
+        else:
+            q_values = self.sess.run(self.output,feed_dict={
+                self.input:[observation]
+                })
+            action = np.random.choice(q_values[0],p=q_values[0])
+            action = np.argmax(q_values[0] == action)
         return action
 
     def observe(self, observation, reward, action):
@@ -81,7 +85,7 @@ class QNetworkAgent(TensorflowAgent):
         
     def next_episode(self, episode):
         sess = self.sess
-
+        self.episode = episode
         if len(self.memory_buffer) == 0:
             return
 
@@ -89,10 +93,32 @@ class QNetworkAgent(TensorflowAgent):
         self.memory_buffer = []
         memory_buffer[:,2] = self.discount_rewards(memory_buffer[:,2])
         np.random.shuffle(memory_buffer)
-        feed_dict = {# przekształcenie bufora w słownik
-                self.reward_holder:memory_buffer[:,2],
-                self.action_holder:memory_buffer[:,1],
-                self.input:np.vstack(memory_buffer[:,0])}
+        list_buffer = memory_buffer.tolist()
+        
+
+        if len(self.replay_buffer) > 10000 and False:
+            for row in memory_buffer:
+                if row[2] < 30:
+                    self.replay_buffer.append(row)
+        else:
+            self.replay_buffer.extend(list_buffer)
+        
+        buffer_size = 10000000
+        buffer_len = len(self.replay_buffer)
+        if buffer_len > buffer_size:
+            self.replay_buffer[len] = self.replay_buffer[len-buffer_size:]
+        buffer_len = len(self.replay_buffer)
+        
+        sample_indices = np.random.choice(buffer_len, size=np.min([buffer_len, 200]), replace=False)
+        samples = []
+        for index in sample_indices:
+            samples.append(self.replay_buffer[index])
+        samples = np.array(samples)
+
+        feed_dict = {
+                self.reward_holder:samples[:,2],
+                self.action_holder:samples[:,1],
+                self.input:np.vstack(samples[:,0])}
 
         summary,grads = sess.run([self.summary, self.gradients], feed_dict=feed_dict)
         for idx,grad in enumerate(grads):

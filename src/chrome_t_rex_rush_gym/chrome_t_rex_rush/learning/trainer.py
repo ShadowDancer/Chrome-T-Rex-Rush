@@ -4,7 +4,7 @@ import time
 def format_float(f):
     return format(f, '07.2f')
 
-def run_agent(agent, env, episodes=100, frames=200, learn=True, visualize=None):
+def run_agent(agent, env, episodes=100, frames=1000, learn=True, visualize=None):
     """Executes predefined number of steps, actions are choosen by agent, environment should be openai gym environemnt"""
 
     rewards = []

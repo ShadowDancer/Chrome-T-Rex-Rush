@@ -14,4 +14,5 @@ env = TRexEnvVector()
 
 model = QNetworkAgent(env.observation_space, env.action_space)
 
+#run_agent(model, env, 100000)
 run_agent(model, env, 100000, visualize='human')

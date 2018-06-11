@@ -63,7 +63,7 @@ class TRexEnvBase(gym.Env):
         self.reward = 1
         if done: # game over
             if self.steps_beyond_done == None:
-                self.reward = -1 # just died
+                self.reward = -5 # just died
                 self.steps_beyond_done = 0
             else:
                 self.reward = 0
@@ -85,6 +85,7 @@ class TRexEnvBase(gym.Env):
         object = self.observation
         if mode == 'human':
             object = self.screen
+            pygame.time.Clock().tick(60)
 
         else:
             if not self.graphics_mode:
