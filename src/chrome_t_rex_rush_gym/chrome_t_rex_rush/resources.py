@@ -75,7 +75,9 @@ class SpriteSheets:
         },
         CACTUS: {
             'frames': 3,
-            'colorkey': -1
+            'colorkey': -1,
+            'x': 3,
+            'y': 5
         },
         PTERA: {
             'frames': 2,

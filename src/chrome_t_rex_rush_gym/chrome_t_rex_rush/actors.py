@@ -107,7 +107,7 @@ class Cactus(pygame.sprite.Sprite):
         self.cactus_sheet = cactus_sheet.resize(size_x, size_y)
         self.rect = self.cactus_sheet.rect
         self.rect.bottom = int(0.98*HEIGHT)
-        self.rect.left = WIDTH + self.rect.width
+        self.rect.left = WIDTH + self.rect.width + random.randrange(0, 100)
         self.image = self.cactus_sheet.sprites[random.randrange(0, 3)]
         self.movement = [-1*speed, 0]
 

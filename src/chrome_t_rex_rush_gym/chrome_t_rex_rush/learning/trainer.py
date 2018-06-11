@@ -36,7 +36,8 @@ def run_agent(agent, env, episodes=100, frames=200, learn=True, visualize=None):
                 if episode > 0 and ((episode + 1) % 100 == 0):
                     mean = np.mean(rewards)
                     std = np.std(rewards)
-                    print("100 episodes reward mean: " + format_float(mean) + " std: " + format_float(std))
+                    max = np.max(rewards)
+                    print("100 episodes reward mean: " + format_float(mean) + " std: " + format_float(std) + " max: " + format_float(max))
                     #if learn and len(means) > 5 and mean > max(means):
                         #agent.save(file)
                         #print('Saving agent with score ' + format_float(mean) + ' in ' + file)

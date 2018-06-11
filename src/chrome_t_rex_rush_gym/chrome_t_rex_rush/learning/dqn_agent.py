@@ -73,7 +73,6 @@ class QNetworkAgent(TensorflowAgent):
        
         action = np.random.choice(q_values,p=q_values)
         action = np.argmax(q_values == action)
-        action = action_space.sample()
         return action
 
     def observe(self, observation, reward, action):

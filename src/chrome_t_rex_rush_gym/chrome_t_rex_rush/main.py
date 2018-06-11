@@ -23,6 +23,13 @@ def presentation():
 
         print(obs.shape, reward, done)
 
+def learning():
+    import learning.vector_trainer
+
+def game():
+    from game import Game
+    Game().run()
 
 if __name__ == '__main__':
-    import learning.vector_trainer
+    #game()
+    learning()
